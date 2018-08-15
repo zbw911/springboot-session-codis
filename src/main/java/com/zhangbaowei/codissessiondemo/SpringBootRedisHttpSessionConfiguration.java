@@ -22,11 +22,11 @@ import java.time.Duration;
 /**
  * Create by  zhangbaowei on 2018/8/15 10:40.
  */
+
+//public class ConfigSessionBean {
 @Configuration
 @EnableConfigurationProperties(RedisSessionProperties.class)
-public class ConfigSessionBean {
-    @Configuration
-    public class SpringBootRedisHttpSessionConfiguration
+public class SpringBootRedisHttpSessionConfiguration
             extends RedisHttpSessionConfiguration {
 
         @Autowired
@@ -115,4 +115,4 @@ public class ConfigSessionBean {
         }
 
     }
-}
+//}
