@@ -25,27 +25,6 @@ import java.time.Duration;
 @Configuration
 @EnableConfigurationProperties(RedisSessionProperties.class)
 public class ConfigSessionBean {
-//    @Bean(name = "sessionRepository")
-//    RedisOperationsSessionRepository redisRepository(RedisOperations<Object, Object> sessionRedisOperations) {
-//        return new RedisOperationsSessionRepositoryImpl(sessionRedisOperations);
-//    }
-
-
-    @Bean
-    public RedisOperations<Object, Object> sessionRedisOperations(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<Object, Object> redisTemplate = new RedisTemplate();
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setConnectionFactory(redisConnectionFactory);
-
-        return redisTemplate;
-    }
-
-//    @Bean
-//    public ConfigureRedisAction configureRedisAction() {
-//        return ConfigureRedisAction.NO_OP;
-//    }
-
     @Configuration
     public class SpringBootRedisHttpSessionConfiguration
             extends RedisHttpSessionConfiguration {
@@ -59,33 +38,42 @@ public class ConfigSessionBean {
         @Autowired
         RedisConnectionFactory redisConnectionFactory;
 
+
+        /**
+         * 使用自定义 StringSerializer ,否则Redis中Key会变成 右边的B样 "\xac\xed\x00\x05t\x00<spring:session:sessions:65203e63-29c1-4a0c-869b-abe7b120070d"
+         *
+         * @return
+         */
+        private RedisOperations<Object, Object> createsessionRedisOperations() {
+            RedisTemplate<Object, Object> redisTemplate = new RedisTemplate();
+            redisTemplate.setKeySerializer(new StringRedisSerializer());
+            redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+            redisTemplate.setConnectionFactory(redisConnectionFactory);
+            redisTemplate.afterPropertiesSet();
+            return redisTemplate;
+        }
+
+
+        /**
+         * 用自定义 sessionRepository 替换 默认 sessionRepository
+         *
+         * @return
+         */
         @Bean
         @Override
         public RedisOperationsSessionRepository sessionRepository() {
 
-            RedisOperationsSessionRepositoryImpl sessionRepository = new RedisOperationsSessionRepositoryImpl(sessionRedisOperations);
+            RedisOperationsSessionRepository sessionRepository = new RedisOperationsSessionRepositoryImpl(createsessionRedisOperations());
 
             Duration timeout = sessionProperties.getTimeout();
-          /*
-           # 下面的代码是在父类里初始化时候用的，暂时看注掉也没关系
-          if (timeout != null) {
-                setMaxInactiveIntervalInSeconds((int) timeout.getSeconds());
-            }
-            setRedisNamespace(redisSessionProperties.getNamespace());
-            setRedisFlushMode(redisSessionProperties.getFlushMode());
-            setCleanupCron(redisSessionProperties.getCleanupCron());*/
-
-
             if (timeout != null) {
                 sessionRepository
                         .setDefaultMaxInactiveInterval((int) timeout.getSeconds());
             }
-
             if (StringUtils.hasText(redisSessionProperties.getNamespace())) {
                 sessionRepository.setRedisKeyNamespace(redisSessionProperties.getNamespace());
             }
             sessionRepository.setRedisFlushMode(redisSessionProperties.getFlushMode());
-
             return sessionRepository;
         }
 
@@ -95,7 +83,7 @@ public class ConfigSessionBean {
          *
          * @return
          */
-//        @Override
+        @Override
         @Bean
         public InitializingBean enableRedisKeyspaceNotificationsInitializer() {
             return null;
